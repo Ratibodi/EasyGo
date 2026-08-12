@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: 'Prompt', sans-serif;
+    background-color: #f5f5f5;
+    color: #333333;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button {
+    font-family: inherit;
+    cursor: pointer;
+    border: none;
+    background: none;
+  }
+
+  input {
+    font-family: inherit;
+  }
+}
+
+@layer components {
+  /* Reusable button styles */
+  .btn-primary {
+    @apply bg-primary text-white rounded-lg px-6 py-3 font-medium text-base w-full text-center inline-block transition-colors duration-200 hover:bg-primary-dark;
+  }
+
+  .btn-outline {
+    @apply border border-primary text-primary rounded-lg px-6 py-3 font-medium text-base w-full text-center inline-block transition-colors duration-200 hover:bg-secondary;
+  }
+
+  /* Reusable header */
+  .header {
+    @apply flex items-center justify-between p-4 border-b border-border-color bg-white sticky top-0 z-10;
+  }
+
+  .header-back {
+    @apply text-xl text-text-dark w-6 shrink-0;
+  }
+
+  .header-title {
+    @apply text-center flex-1;
+  }
+
+  .header-title h1 {
+    @apply text-base font-semibold leading-tight;
+  }
+
+  .header-title span {
+    @apply text-xs text-text-gray font-normal;
+  }
+
+  .header-close {
+    @apply text-xl text-text-dark w-6 text-right shrink-0;
+  }
+
+  .app-bar {
+    @apply flex items-center justify-between p-4 bg-white;
+  }
+
+  .app-logo {
+    @apply flex items-center gap-2 text-primary font-bold text-xl;
+  }
+
+  .app-menu {
+    @apply text-primary text-2xl;
+  }
+}
