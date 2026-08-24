@@ -1,36 +1,165 @@
-import Link from "next/link";
+"use client";
 
-export default function SeatSelection() {
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+
+function SeatSelectionContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tripId = searchParams.get("tripId");
+  const paxStr = searchParams.get("pax") || "1";
+  
+  const paxCount = parseInt(paxStr, 10) || 1;
+
   const rows = Array.from({ length: 10 }, (_, i) => i + 1);
-  const selectedSeats = ['1A', '2A'];
-  // สมมติว่ามีที่นั่งถูกจองแล้วตามโค้ดเดิม เพื่อให้แสดงผลตาม Legend
-  const bookedSeats = ['3A', '5B', '7C', '8D', '10C', '10D'];
+  
+  const [passengers, setPassengers] = useState([]);
+  const [tripDetails, setTripDetails] = useState(null);
+  
+  const [selectedSeats, setSelectedSeats] = useState([]);
+  const [bookedSeats, setBookedSeats] = useState([]);
+  const [lockedSeats, setLockedSeats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    // Load passengers from session storage
+    const storedPassengers = sessionStorage.getItem("booking_passengers");
+    if (storedPassengers) {
+      setPassengers(JSON.parse(storedPassengers));
+    } else {
+      // Create empty passengers if directly accessed
+      setPassengers(Array.from({ length: paxCount }, (_, i) => ({ name: `ผู้โดยสาร ${i + 1}` })));
+    }
+
+    if (tripId) {
+      fetchTripDetails();
+      fetchSeatStatus();
+      // Optional: poll every 10 seconds to update locked seats
+      const interval = setInterval(fetchSeatStatus, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [tripId, paxCount]);
+
+  const fetchTripDetails = async () => {
+    try {
+      const res = await fetch(`/api/trips/${tripId}`);
+      const data = await res.json();
+      if (data.success) {
+        setTripDetails(data.data);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const fetchSeatStatus = async () => {
+    try {
+      const res = await fetch(`/api/seats/status?tripId=${tripId}`);
+      const data = await res.json();
+      if (data.success) {
+        setBookedSeats(data.data.bookedSeats);
+        setLockedSeats(data.data.lockedSeats);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isSeatUnavailable = (seatId) => {
+    return bookedSeats.includes(seatId) || lockedSeats.includes(seatId);
+  };
+
+  const handleSeatClick = (seatId) => {
+    if (isSeatUnavailable(seatId)) return; // ไม่สามารถเลือกที่นั่งที่ถูกจอง/ล็อคได้
+
+    if (selectedSeats.includes(seatId)) {
+      // ยกเลิกการเลือก
+      setSelectedSeats(selectedSeats.filter(s => s !== seatId));
+    } else {
+      // เลือกเพิ่ม (ตรวจสอบจำนวนสูงสุด)
+      if (selectedSeats.length < paxCount) {
+        setSelectedSeats([...selectedSeats, seatId]);
+      } else {
+        alert(`คุณเลือกที่นั่งครบ ${paxCount} ที่นั่งแล้ว`);
+      }
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (selectedSeats.length < paxCount) {
+      alert(`กรุณาเลือกที่นั่งให้ครบ ${paxCount} ที่นั่ง`);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/seats/lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tripId, seats: selectedSeats }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        // อัปเดตที่นั่งให้กับผู้โดยสารใน sessionStorage
+        const updatedPassengers = passengers.map((p, index) => ({
+          ...p,
+          seatNumber: selectedSeats[index] || ""
+        }));
+        sessionStorage.setItem("booking_passengers", JSON.stringify(updatedPassengers));
+        
+        // ไปยังหน้าชำระเงิน
+        router.push(`/payment?tripId=${tripId}&pax=${paxCount}`);
+      } else {
+        alert(data.error || "ไม่สามารถล็อคที่นั่งได้ กรุณาลองใหม่");
+        fetchSeatStatus(); // อัปเดตสถานะที่นั่งล่าสุด
+      }
+    } catch (error) {
+      console.error(error);
+      alert("เกิดข้อผิดพลาดในการล็อคที่นั่ง");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const seatClass = (seatId) => {
-    if (selectedSeats.includes(seatId)) return 'bg-[#ed8936] text-white border-[#ed8936]'; // สีส้ม (เลือกแล้ว)
-    if (bookedSeats.includes(seatId)) return 'bg-[#006b5e] text-white border-[#006b5e]'; // สีเขียว (ไม่ว่าง)
-    return 'border-gray-400 bg-white text-gray-700'; // สีขาวขอบเทา (ว่าง)
+    if (selectedSeats.includes(seatId)) return "bg-[#ed8936] text-white border-[#ed8936]"; // สีส้ม (เลือกแล้ว)
+    if (isSeatUnavailable(seatId)) return "bg-[#006b5e] text-white border-[#006b5e] cursor-not-allowed"; // สีเขียว (ไม่ว่าง)
+    return "border-gray-400 bg-white text-gray-700 hover:bg-gray-50"; // สีขาวขอบเทา (ว่าง)
+  };
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    return new Date(dateStr).toLocaleDateString("th-TH", { day: "numeric", month: "long", year: "numeric" });
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-[#f8f9fa] font-sans relative pb-28">
-      
       {/* Header */}
       <div className="flex items-center px-4 bg-white h-14 border-b border-gray-100 z-10 shrink-0">
-        <Link href="/passenger-info" className="text-gray-700 mr-3 p-1">
+        <button onClick={() => router.back()} className="text-gray-700 mr-3 p-1">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-        </Link>
+        </button>
         <div className="flex-1 flex flex-col justify-center">
-          <h1 className="text-[14px] font-bold text-gray-900 leading-tight">Title 2 Line Left</h1>
-          <span className="text-[11px] text-gray-500 leading-tight">Subtitle</span>
+          <h1 className="text-[14px] font-bold text-gray-900 leading-tight">เลือกที่นั่ง</h1>
+          <span className="text-[11px] text-gray-500 leading-tight">EasyGo</span>
         </div>
-        <button className="text-gray-700 ml-3 p-1">
+        <Link href="/home" className="text-gray-700 ml-3 p-1">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
-        </button>
+        </Link>
       </div>
 
       {/* App Bar */}
@@ -55,52 +184,60 @@ export default function SeatSelection() {
         {/* Trip Summary Card */}
         <div className="bg-white rounded-xl p-5 mb-6 shadow-sm border border-gray-100">
           <div className="text-[15px] font-bold text-gray-800 flex items-center gap-1.5 mb-1">
-            เชียงใหม่
+            {tripDetails?.origin || "ต้นทาง"}
             <svg className="w-3.5 h-3.5 text-[#006b5e]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
-            เชียงราย
+            {tripDetails?.destination || "ปลายทาง"}
           </div>
-          <div className="text-[11px] text-gray-500 mb-4">วันที่ 1 ธันวาคม ค.ศ. 2026</div>
+          <div className="text-[11px] text-gray-500 mb-4">{tripDetails ? formatDate(tripDetails.departureTime) : "วันที่..."}</div>
           
           <div className="mb-5 relative">
             <div className="absolute left-[39.5px] top-2 bottom-2 w-[1.5px] bg-[#006b5e] z-0"></div>
             
             <div className="flex items-start mb-2.5 relative z-10">
-              <span className="text-[11px] text-gray-600 w-[30px] mt-0.5 shrink-0">09:30</span>
+              <span className="text-[11px] text-gray-600 w-[30px] mt-0.5 shrink-0">{tripDetails ? formatTime(tripDetails.departureTime) : "..."}</span>
               <span className="w-2.5 h-2.5 bg-[#006b5e] rounded-full mt-1 mx-2 shrink-0"></span>
-              <span className="text-[12px] font-medium text-gray-800">สถานีขนส่งเชียงใหม่ แห่งที่ 3</span>
+              <span className="text-[12px] font-medium text-gray-800">สถานีขนส่ง{tripDetails?.origin}</span>
             </div>
             
             <div className="flex items-start relative z-10">
-              <span className="text-[11px] text-gray-600 w-[30px] mt-0.5 shrink-0">11:45</span>
+              <span className="text-[11px] text-gray-600 w-[30px] mt-0.5 shrink-0">{tripDetails ? formatTime(tripDetails.arrivalTime) : "..."}</span>
               <span className="w-2.5 h-2.5 bg-[#006b5e] rounded-full mt-1 mx-2 shrink-0"></span>
-              <span className="text-[12px] font-medium text-gray-800">สถานีขนส่งเชียงราย แห่งที่ 1</span>
+              <span className="text-[12px] font-medium text-gray-800">สถานีขนส่ง{tripDetails?.destination}</span>
             </div>
           </div>
           
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-6 border border-gray-100 bg-gray-50 rounded flex items-center justify-center shrink-0">
-               <span className="text-[6px] font-black italic text-green-600 tracking-tighter">กรีนบัส</span>
-            </div>
+            {tripDetails?.company?.logoUrl ? (
+               <img src={tripDetails.company.logoUrl} alt={tripDetails.company.name} className="w-10 h-6 object-contain" />
+            ) : (
+              <div className="w-10 h-6 border border-gray-100 bg-gray-50 rounded flex items-center justify-center shrink-0">
+                 <span className="text-[6px] font-black italic text-[#006b5e] tracking-tighter">
+                   {tripDetails?.company?.name?.substring(0,3) || 'BUS'}
+                 </span>
+              </div>
+            )}
             <div className="text-[12px] font-bold text-[#006b5e]">
-              กรีนบัส <span className="text-[11px] font-normal text-gray-600 ml-1">V-Class (มาตรฐาน ม.1 ก)</span>
+              {tripDetails?.company?.name || 'บริษัทรถ'} <span className="text-[11px] font-normal text-gray-600 ml-1">{tripDetails?.busType || ''}</span>
             </div>
           </div>
         </div>
 
-        <h3 className="text-[15px] font-bold text-[#006b5e] mb-4">เลือกที่นั่ง</h3>
+        <h3 className="text-[15px] font-bold text-[#006b5e] mb-4">เลือกที่นั่ง ({selectedSeats.length}/{paxCount})</h3>
 
         {/* Selected Passengers List */}
         <div className="flex flex-col gap-2 mb-6">
-          <div className="flex justify-between items-center bg-[#fbfcfd] border border-[#006b5e] rounded-xl px-4 py-3 shadow-sm">
-            <span className="text-[13px] font-medium text-gray-800">1. มีนา สุขสันต์</span>
-            <span className="text-[14px] font-bold text-[#006b5e]">1A</span>
-          </div>
-          <div className="flex justify-between items-center bg-[#fbfcfd] border border-[#006b5e] rounded-xl px-4 py-3 shadow-sm">
-            <span className="text-[13px] font-medium text-gray-800">2. เมษา สุขสันต์</span>
-            <span className="text-[14px] font-bold text-[#006b5e]">2A</span>
-          </div>
+          {passengers.map((p, idx) => (
+            <div key={idx} className="flex justify-between items-center bg-[#fbfcfd] border border-[#006b5e] rounded-xl px-4 py-3 shadow-sm">
+              <span className="text-[13px] font-medium text-gray-800">{idx + 1}. {p.name || `ผู้โดยสาร ${idx + 1}`}</span>
+              {selectedSeats[idx] ? (
+                <span className="text-[14px] font-bold text-[#006b5e]">{selectedSeats[idx]}</span>
+              ) : (
+                <span className="text-[12px] text-gray-400">ยังไม่ระบุที่นั่ง</span>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* Legend */}
@@ -120,7 +257,7 @@ export default function SeatSelection() {
         </div>
 
         {/* Bus Layout */}
-        <div className="border border-gray-300 rounded-[24px] p-5 mx-auto max-w-[280px] bg-white shadow-sm">
+        <div className={`border border-gray-300 rounded-[24px] p-5 mx-auto max-w-[280px] bg-white shadow-sm transition-opacity ${loading ? 'opacity-50' : 'opacity-100'}`}>
           <div className="flex justify-between items-center mb-6 px-1">
             {/* Door Icon */}
             <div className="w-8 h-8 flex items-center justify-center border border-gray-400 rounded">
@@ -146,6 +283,7 @@ export default function SeatSelection() {
                     return (
                       <div
                         key={seatId}
+                        onClick={() => handleSeatClick(seatId)}
                         className={`w-10 h-10 flex items-center justify-center rounded-lg text-[13px] font-medium transition-all duration-200 cursor-pointer ${seatClass(seatId)}`}
                       >
                         {seatId}
@@ -164,6 +302,7 @@ export default function SeatSelection() {
                     return (
                       <div
                         key={seatId}
+                        onClick={() => handleSeatClick(seatId)}
                         className={`w-10 h-10 flex items-center justify-center rounded-lg text-[13px] font-medium transition-all duration-200 cursor-pointer ${seatClass(seatId)}`}
                       >
                         {seatId}
@@ -179,14 +318,27 @@ export default function SeatSelection() {
 
       {/* Floating Confirm Button */}
       <div className="fixed bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[#f8f9fa] via-[#f8f9fa] to-transparent flex justify-center pb-8 z-20 pointer-events-none">
-        <Link 
-          href="/payment" 
-          className="bg-[#006b5e] hover:bg-[#005a4e] text-white font-semibold py-3.5 px-8 rounded-full w-full max-w-[280px] text-center shadow-[0_4px_12px_rgba(0,107,94,0.3)] transition-all pointer-events-auto text-[15px]"
+        <button 
+          onClick={handleConfirm}
+          disabled={submitting || selectedSeats.length < paxCount}
+          className={`font-semibold py-3.5 px-8 rounded-full w-full max-w-[280px] text-center shadow-[0_4px_12px_rgba(0,107,94,0.3)] transition-all pointer-events-auto text-[15px] ${
+            selectedSeats.length === paxCount 
+              ? "bg-[#006b5e] hover:bg-[#005a4e] text-white" 
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
         >
-          ยืนยันที่นั่ง
-        </Link>
+          {submitting ? "กำลังจองที่นั่ง..." : "ยืนยันที่นั่ง"}
+        </button>
       </div>
       
     </div>
+  );
+}
+
+export default function SeatSelection() {
+  return (
+    <Suspense fallback={<div className="flex flex-col min-h-screen bg-[#f8f9fa] justify-center items-center text-[#006b5e] font-bold">กำลังโหลด...</div>}>
+      <SeatSelectionContent />
+    </Suspense>
   );
 }

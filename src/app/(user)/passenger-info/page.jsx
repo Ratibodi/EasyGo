@@ -84,7 +84,10 @@ function PassengerInfoContent() {
       return;
     }
 
-    // Pass data to seat-selection (can use URL params for now)
+    // Save passenger data to sessionStorage so seat-selection can use it
+    sessionStorage.setItem('booking_passengers', JSON.stringify(passengers));
+
+    // Pass data to seat-selection
     router.push(`/seat-selection?tripId=${tripId}&pax=${paxCount}`);
   };
 

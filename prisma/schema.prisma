@@ -55,4 +55,44 @@ model Trip {
   // ผูกกับบริษัท
   companyId      String
   company        Company  @relation(fields: [companyId], references: [id])
+  bookings       Booking[]
+  seatLocks      SeatLock[]
+}
+
+// ตารางการจอง
+model Booking {
+  id            String      @id @default(uuid())
+  tripId        String
+  userId        String?     // หากมีการ login
+  lineId        String?
+  status        String      @default("PENDING") // PENDING, CONFIRMED, CANCELLED
+  totalPrice    Float
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  trip          Trip        @relation(fields: [tripId], references: [id])
+  passengers    Passenger[]
+}
+
+// ตารางผู้โดยสารและการเลือกที่นั่ง
+model Passenger {
+  id          String   @id @default(uuid())
+  bookingId   String
+  name        String
+  idCard      String?
+  phone       String?
+  seatNumber  String
+
+  booking     Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+}
+
+// ตารางล็อคที่นั่งชั่วคราว
+model SeatLock {
+  id          String   @id @default(uuid())
+  tripId      String
+  seatNumber  String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
 }
