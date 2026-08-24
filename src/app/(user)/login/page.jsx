@@ -29,15 +29,24 @@ export default function Login() {
             if (data.success) {
               router.push("/home");
             } else {
-              alert("Login failed: " + (data.error || data.details || "Unknown error"));
+              // If token expired or invalid, log out from LIFF to force a fresh login
               console.error("Login failed:", data);
+              alert("เซสชั่นหมดอายุ กรุณาเข้าสู่ระบบใหม่อีกครั้ง");
+              if (liff.isLoggedIn()) {
+                liff.logout();
+              }
               setLoading(false);
+              window.location.reload(); // Reload to reset LIFF state
             }
           })
           .catch((err) => {
-            alert("Verification error: " + err.message);
             console.error("Verification error:", err);
+            alert("เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์ กรุณาลองใหม่");
+            if (liff.isLoggedIn()) {
+              liff.logout();
+            }
             setLoading(false);
+            window.location.reload();
           });
       } else {
         setLoading(false);

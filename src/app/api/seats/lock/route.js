@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
-const LOCK_DURATION_MINUTES = 10;
+const LOCK_DURATION_MINUTES = 5;
 
 export async function POST(request) {
   try {
