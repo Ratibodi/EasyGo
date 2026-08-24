@@ -29,11 +29,13 @@ export default function Login() {
             if (data.success) {
               router.push("/home");
             } else {
-              console.error("Login failed:", data.error);
+              alert("Login failed: " + (data.error || data.details || "Unknown error"));
+              console.error("Login failed:", data);
               setLoading(false);
             }
           })
           .catch((err) => {
+            alert("Verification error: " + err.message);
             console.error("Verification error:", err);
             setLoading(false);
           });
