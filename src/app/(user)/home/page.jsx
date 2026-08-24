@@ -45,8 +45,20 @@ export default function Home() {
       <div className="flex-1 px-4 py-5 overflow-y-auto">
         
         {/* Search Card */}
-        <div className="bg-[#eef8f2] border border-[#d1e8dc] rounded-xl p-5 mb-8 shadow-sm">
+        <form action="/trips" method="GET" className="bg-[#eef8f2] border border-[#d1e8dc] rounded-xl p-5 mb-8 shadow-sm">
           <h2 className="text-[16px] font-bold text-[#006b5e] mb-5 text-center">ค้นหาการเดินทางของคุณ</h2>
+
+          <datalist id="provinces">
+            <option value="เชียงใหม่" />
+            <option value="เชียงราย" />
+            <option value="ลำปาง" />
+            <option value="ลำพูน" />
+            <option value="แม่ฮ่องสอน" />
+            <option value="พะเยา" />
+            <option value="แพร่" />
+            <option value="น่าน" />
+            <option value="อุตรดิตถ์" />
+          </datalist>
 
           {/* Form Fields */}
           <div className="flex flex-col gap-4">
@@ -59,7 +71,7 @@ export default function Home() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <input type="text" defaultValue="เชียงใหม่" className="bg-transparent border-none outline-none w-full text-sm text-gray-700 font-medium ml-2" />
+                <input type="text" name="from" list="provinces" defaultValue="เชียงใหม่" placeholder="เลือกหรือพิมพ์จังหวัดต้นทาง" className="bg-transparent border-none outline-none w-full text-sm text-gray-700 font-medium ml-2" />
               </div>
             </div>
 
@@ -70,7 +82,7 @@ export default function Home() {
                 <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                 </svg>
-                <input type="text" defaultValue="เชียงราย" className="bg-transparent border-none outline-none w-full text-sm text-gray-700 font-medium ml-2" />
+                <input type="text" name="to" list="provinces" defaultValue="เชียงราย" placeholder="เลือกหรือพิมพ์จังหวัดปลายทาง" className="bg-transparent border-none outline-none w-full text-sm text-gray-700 font-medium ml-2" />
               </div>
             </div>
 
@@ -81,7 +93,7 @@ export default function Home() {
                 <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <input type="text" defaultValue="01/12/2026" className="bg-transparent border-none outline-none w-full text-sm text-gray-700 font-medium ml-2" />
+                <input type="date" name="date" defaultValue="2026-12-01" className="bg-transparent border-none outline-none w-full text-sm text-gray-700 font-medium ml-2" />
               </div>
             </div>
 
@@ -92,16 +104,16 @@ export default function Home() {
                 <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
-                <input type="text" defaultValue="1 ท่าน" className="bg-transparent border-none outline-none w-full text-sm text-gray-700 font-medium ml-2" />
+                <input type="number" name="pax" min="1" max="10" defaultValue="1" placeholder="จำนวนคน" className="bg-transparent border-none outline-none w-full text-sm text-gray-700 font-medium ml-2" />
               </div>
             </div>
 
           </div>
 
-          <Link href="/trips" className="block text-center mt-6 bg-[#006b5e] hover:bg-[#005a4e] text-white font-medium py-3 rounded-md transition-colors text-[15px]">
+          <button type="submit" className="w-full block text-center mt-6 bg-[#006b5e] hover:bg-[#005a4e] text-white font-medium py-3 rounded-md transition-colors text-[15px]">
             ค้นหาเที่ยวรถ
-          </Link>
-        </div>
+          </button>
+        </form>
 
         {/* Popular Routes */}
         <h3 className="text-[16px] font-bold text-[#006b5e] mb-4">เส้นทางยอดนิยม</h3>

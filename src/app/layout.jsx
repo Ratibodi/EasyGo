@@ -1,19 +1,23 @@
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { LiffProvider } from "@/components/LiffProvider";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "EasyGo",
+  title: "EasyGo App",
   description: "Bus ticket booking application",
 };
 
-export default function RootLayout({
-  children,
-}) {
+export default function RootLayout({ children }) {
   return (
-    <html lang="th">
-      <body>
-        <main className="w-full max-w-[480px] mx-auto bg-white min-h-screen relative shadow-[0_0_20px_rgba(0,0,0,0.05)] overflow-x-hidden flex flex-col">
-          {children}
-        </main>
+    <html lang="en">
+      <body className={inter.className}>
+        <LiffProvider>
+          <main className="w-full bg-gray-50 min-h-screen">
+            {children}
+          </main>
+        </LiffProvider>
       </body>
     </html>
   );

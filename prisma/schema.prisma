@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ตารางบริษัทรถ
+model Company {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  logoUrl   String?
+  status    String   @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // ความสัมพันธ์
+  users     User[]
+  trips     Trip[]
+}
+
+// ตารางผู้ใช้งานและ Role
+model User {
+  id        String   @id @default(uuid())
+  lineId    String?  @unique // รหัส LINE User ID สำหรับ Login
+  email     String?  @unique
+  name      String
+  image     String?  // รูปโปรไฟล์จาก LINE
+  role      String   @default("USER") // SUPER_ADMIN, COMPANY_ADMIN, USER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // หากเป็น Company Admin จะต้องผูกกับตาราง Company
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+}
+
+// ตารางเที่ยวรถ (ข้อมูลที่ได้จากการ Scrape)
+model Trip {
+  id             String   @id @default(uuid())
+  origin         String   // จังหวัดต้นทาง
+  destination    String   // จังหวัดปลายทาง
+  departureTime  DateTime // เวลาออกรถ
+  arrivalTime    DateTime // เวลาถึงปลายทาง
+  price          Float    // ราคา
+  availableSeats Int      // ที่นั่งว่าง
+  busType        String   // ประเภทรถ เช่น VIP 24, Gold Class
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // ผูกกับบริษัท
+  companyId      String
+  company        Company  @relation(fields: [companyId], references: [id])
+}

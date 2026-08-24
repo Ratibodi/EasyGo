@@ -1,6 +1,55 @@
-import Link from "next/link";
+"use client";
+
+import { useLiff } from "@/components/LiffProvider";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function Login() {
+  const { liff, isReady, isLoggedIn } = useLiff();
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isReady || !liff) return;
+
+    if (isLoggedIn) {
+      setLoading(true);
+      const idToken = liff.getIDToken();
+      if (idToken) {
+        // Verify with our backend
+        fetch("/api/auth/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ idToken }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              router.push("/home");
+            } else {
+              console.error("Login failed:", data.error);
+              setLoading(false);
+            }
+          })
+          .catch((err) => {
+            console.error("Verification error:", err);
+            setLoading(false);
+          });
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [isReady, isLoggedIn, liff, router]);
+
+  const handleLineLogin = () => {
+    if (!isReady || !liff) return;
+    if (!liff.isLoggedIn()) {
+      liff.login();
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-100 font-sans">
       
@@ -12,8 +61,8 @@ export default function Login() {
           </svg>
         </button>
         <div className="flex-1 flex flex-col justify-center">
-          <h1 className="text-[14px] font-bold text-gray-900 leading-tight">Title 2 Line Left</h1>
-          <span className="text-[11px] text-gray-500 leading-tight">Subtitle</span>
+          <h1 className="text-[14px] font-bold text-gray-900 leading-tight">EasyGo</h1>
+          <span className="text-[11px] text-gray-500 leading-tight">เข้าสู่ระบบ</span>
         </div>
         <button className="text-gray-700 ml-3 p-1">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -26,11 +75,9 @@ export default function Login() {
       <div 
         className="flex-1 flex flex-col items-center justify-center p-6 relative bg-cover bg-center"
         style={{ 
-          // ใช้ภาพพื้นหลังวิวภูเขา (สามารถเปลี่ยน URL เป็นภาพในโปรเจกต์ของคุณได้ เช่น url('/bg-mountain.jpg'))
           backgroundImage: "url('https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=1000&auto=format&fit=crop')" 
         }}
       >
-        {/* Overlay บางๆ เพื่อให้ตัวหนังสือบนการ์ดเด่นขึ้น (ถ้าต้องการ) */}
         <div className="absolute inset-0 bg-black/10"></div>
 
         {/* Center Card */}
@@ -54,8 +101,12 @@ export default function Login() {
           </div>
 
           {/* LINE Login Button */}
-          <button className="w-full bg-[#06C755] hover:bg-[#05b34c] active:bg-[#04a044] text-white font-bold py-3.5 px-4 rounded-full transition-colors flex items-center justify-center shadow-sm">
-            Log in with LINE
+          <button 
+            onClick={handleLineLogin}
+            disabled={!isReady || loading}
+            className={`w-full ${!isReady || loading ? 'bg-gray-400' : 'bg-[#06C755] hover:bg-[#05b34c] active:bg-[#04a044]'} text-white font-bold py-3.5 px-4 rounded-full transition-colors flex items-center justify-center shadow-sm`}
+          >
+            {loading ? "กำลังเข้าสู่ระบบ..." : "Log in with LINE"}
           </button>
           
         </div>
